@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import os
 
-def open_stellar_fits(filepath, wavelengthpath, output_path, star_radius_rsun):
+def open_stellar_fits(filepath, wavelengthpath, output_path):
     with fits.open(filepath) as hdul:
         print(f"\nOpened FITS file: {filepath}")
         print(f"Contains {len(hdul)} HDU(s):\n")
@@ -44,7 +44,7 @@ def open_stellar_fits(filepath, wavelengthpath, output_path, star_radius_rsun):
     label = os.path.basename(filepath).split("HiRes")[-1].split(".fits")[0].strip("_")
 
     # Convert flux from ergs/cm²/s/cm → ergs/cm²/s/nm, wavelength armstrong -> nm
-    combined = np.column_stack((data_wave * 0.1, data_star_corrected * 1e-7))
+    combined = np.column_stack((data_wave * 0.1, data_star * 1e-7))
 
     header = f"Spectrum of {label} at 1 AU\nWL(nm)\tFlux(ergs/cm**2/s/nm)"
     np.savetxt(output_path, combined, fmt="%.6e", delimiter="\t", header=header, comments="# ")
@@ -55,7 +55,6 @@ if __name__ == "__main__":
     parser.add_argument("file1", help="Path to the stellar spectrum fits file")
     parser.add_argument("file2", help="Path to the wavelength fits file")
     parser.add_argument("--out", help="Optional output .txt filename")
-    parser.add_argument("--rstar", type=float, required=True, help="Star radius in solar radii")
 
     args = parser.parse_args()
-    open_stellar_fits(args.file1, args.file2, args.out, args.rstar)
+    open_stellar_fits(args.file1, args.file2, args.out)
