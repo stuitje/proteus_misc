@@ -1,3 +1,4 @@
 out/ 
+out_compressed/
 tmp/
 __pycache__/
