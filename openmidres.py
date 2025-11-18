@@ -38,7 +38,7 @@ def main():
                 Path(args.out),
                 np.column_stack([wave_nm, flux_nm]),
                 fmt="%.9f\t%.6e",
-                header="wavelength_nm\tflux_erg_cm^-2_s^-1_nm^-1",
+                header="wavelength (nm)\tflux (erg/cm^2/s/nm)",
                 comments="# ",
             )
             print(f'Saved file to {Path(args.out)}.')
