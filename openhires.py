@@ -46,12 +46,12 @@ def open_stellar_fits(filepath, wavelengthpath, output_path):
     # Convert flux from ergs/cm²/s/cm → ergs/cm²/s/nm, wavelength armstrong -> nm
     combined = np.column_stack((data_wave * 0.1, data_star * 1e-7))
 
-    header = f"Spectrum of {label} at 1 AU\nWL(nm)\tFlux(ergs/cm**2/s/nm)"
+    header = f"wavelength_nm\tflux_erg_cm^-2_s^-1_nm^-1"
     np.savetxt(output_path, combined, fmt="%.6e", delimiter="\t", header=header, comments="# ")
     print(f"Data saved to: {output_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Save FITS data to a text file with 1 AU flux correction.")
+    parser = argparse.ArgumentParser(description="Save FITS data to a text file with unit conversion")
     parser.add_argument("file1", help="Path to the stellar spectrum fits file")
     parser.add_argument("file2", help="Path to the wavelength fits file")
     parser.add_argument("--out", help="Optional output .txt filename")
