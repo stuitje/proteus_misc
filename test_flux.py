@@ -17,7 +17,7 @@ def load_spectrum(filename):
 
 def flux_integral(lam, flux, lam_min, lam_max):
     """
-    Compute ∫ F_lambda dλ between lam_min and lam_max
+    Compute the flux integral between lam_min and lam_max
     using the trapezoidal rule on the native grid.
     """
     lam = np.asarray(lam, float)

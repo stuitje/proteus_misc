@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://phoenix.astro.physik.uni-goettingen.de/data/v1.0/MedResFITS/R10000FITS/"
 
 def list_all_zip_urls(base_url=BASE_URL):
-    """Return every ZIP URL (Alpha=... and alpha=0 ones)."""
+    """Return every ZIP URL"""
     r = requests.get(base_url, timeout=60)
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
@@ -20,7 +20,7 @@ def list_all_zip_urls(base_url=BASE_URL):
     return sorted(set(urls))
 
 def convert_with_midres(midres_module, fits_path: Path, out_dir: Path):
-    """Run your midres.main() on one FITS → TXT."""
+    """Run midres.main() on one FITS → TXT."""
     out_name = fits_path.name
     if "HiRes" in out_name:
         out_name = out_name.replace("HiRes", "MidRes")
@@ -71,7 +71,7 @@ def main():
     ap.add_argument("--outdir", default="out", help="Destination folder for .txt files.")
     ap.add_argument("--workdir", default="tmp", help="Temporary folder for downloads/extraction.")
     ap.add_argument("--overwrite", action="store_true", help="Re-download and re-convert even if files exist.")
-    ap.add_argument("--midres-module", default="openmidres", help="Your converter module name (default midres.py).")
+    ap.add_argument("--midres-module", default="openmidres", help="Converter module name (default midres.py).")
     args = ap.parse_args()
 
     out_dir = Path(args.outdir); out_dir.mkdir(parents=True, exist_ok=True)
