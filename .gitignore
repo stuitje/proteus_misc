@@ -1,4 +1,8 @@
 out/ 
 out_compressed/
+out_zipped/
+out_zipped_2/
+out_R02000/
+out_R05000/
 tmp/
 __pycache__/
