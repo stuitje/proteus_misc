@@ -58,7 +58,8 @@ if T2:
 
 plt.xlabel(xlab.replace("_"," "))
 plt.ylabel(ylab.replace("_"," "))
-#plt.xlim(657, 658) # for H alpha line
+#plt.xlim(650, 660) # for H alpha line
 plt.legend(frameon=False)
-plt.tight_layout()
+plt.tight_layout()#
 plt.show()
+plt.savefig("spectrum_comparison.png", dpi=150)
