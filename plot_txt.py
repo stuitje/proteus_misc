@@ -48,17 +48,17 @@ T1 = parse_teff_from_name(l1)
 if T1:
     bb1 = planck_lambda_nm(T1, d1[xlab].astype(float))
     scale = fit_scale(bb1, d1[ylab])
-    plt.plot(d1[xlab], bb1*scale, label=f"BB at {T1} K")
+    #plt.plot(d1[xlab], bb1*scale, label=f"BB at {T1} K")
 
 T2 = parse_teff_from_name(l2)
 if T2:
     bb2 = planck_lambda_nm(T2, d2[xlab].astype(float))
     scale = fit_scale(bb2, d2[ylab])
-    plt.plot(d2[xlab], bb2*scale, label=f"BB at {T2} K")
+    #plt.plot(d2[xlab], bb2*scale, label=f"BB at {T2} K")
 
 plt.xlabel(xlab.replace("_"," "))
 plt.ylabel(ylab.replace("_"," "))
-#plt.xlim(650, 660) # for H alpha line
+plt.xlim(1000, 1020) 
 plt.legend(frameon=False)
 plt.tight_layout()#
 plt.show()
