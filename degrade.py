@@ -10,12 +10,14 @@ from scipy.ndimage import gaussian_filter1d
 from spectres import spectres
 
 
-def compute_sigma_and_new_grid(example_file, R_native, R_target, factor):
+def compute_sigma_and_new_grid(example_file, R_native, R_target, oversamp):
     """
     From spectrum:
-    - measure Δln lambda
+    - measure Δln(lambda) on the *original* grid
     - compute Gaussian sigma in pixels to degrade R_native -> R_target
-    - build a new log-lambda grid with Δln lambda_new = factor * Δln lambda_old (downsampling)
+    - build a new log-lambda grid with desired oversampling:
+        R_samp_target = oversamp * R_target
+        Δln(lambda)_new = 1 / R_samp_target
     """
     with open(example_file) as f:
         first = f.readline()
@@ -24,42 +26,46 @@ def compute_sigma_and_new_grid(example_file, R_native, R_target, factor):
 
     lam = data[:, 0].astype(float)
     lnlam = np.log(lam)
-    dln = np.median(np.diff(lnlam))
+    dln_old = np.median(np.diff(lnlam))
 
     if R_target >= R_native:
         raise ValueError(f"R_target ({R_target}) must be < R_native ({R_native})")
 
+    # 1) Compute Gaussian kernel width in pixels for R_native -> R_target ===
     # Gaussian: FWHM = 2 * sqrt(2 ln 2) * sigma
     fwhm_factor = 2.0 * np.sqrt(2.0 * np.log(2.0))
 
     sigma_ln_native = 1.0 / (R_native * fwhm_factor)
     sigma_ln_target = 1.0 / (R_target * fwhm_factor)
 
-    # convolve with Gaussian of sigma_kernel where:
+    # Convolution of Gaussians: sigma_target^2 = sigma_native^2 + sigma_kernel^2
     sigma_ln_kernel2 = sigma_ln_target**2 - sigma_ln_native**2
     if sigma_ln_kernel2 <= 0:
         raise ValueError("Computed kernel sigma^2 <= 0; check R_native and R_target")
 
     sigma_ln_kernel = np.sqrt(sigma_ln_kernel2)
-    sigma_pix = sigma_ln_kernel / dln
+    sigma_pix = sigma_ln_kernel / dln_old  # sigma in pixels on the original grid
 
-    # New log-lambda grid, downsampled by "factor" in Δln lambda
-    dln_new = factor * dln
+    # 2) Build target log-lambda grid with oversampling = oversamp
+    # R_samp_target = oversamp * R_target
+    R_samp_target = oversamp * R_target
+    dln_new = 1.0 / R_samp_target      # exact Δln(lambda) for target sampling R
+
     ln_min = lnlam.min()
     ln_max = lnlam.max()
     n_new = int(np.floor((ln_max - ln_min) / dln_new)) + 1
     ln_new = ln_min + dln_new * np.arange(n_new)
     lam_new = np.exp(ln_new)
 
-    return sigma_pix, dln, lam_new
+    return sigma_pix, dln_old, dln_new, lam_new
 
 
 def process_one_file(
-    infile, outdir, sigma_pix, lam_new, R_native, R_target, factor, overwrite=False
+    infile, outdir, sigma_pix, lam_new, R_native, R_target, oversamp, overwrite=False
 ):
     base = os.path.basename(infile)
     root, ext = os.path.splitext(base)
-    out_name = f"{root}_R{int(R_target):05d}"
+    out_name = f"{root}_R{int(R_target):05d}_os{oversamp:.1f}.txt"
     outfile = os.path.join(outdir, out_name)
 
     if (not overwrite) and os.path.exists(outfile):
@@ -74,7 +80,7 @@ def process_one_file(
     lam = data[:, 0].astype(float)
     flux = data[:, 1].astype(float)
 
-    # 1) Degrade true resolution (Gaussian in ln lambda  -> Gaussian in pixels here)
+    # 1) Degrade true resolution (Gaussian in ln(lambda) -> Gaussian in pixels here)
     flux_smooth = gaussian_filter1d(flux, sigma_pix, mode="nearest")
 
     # 2) Flux-conserving resample onto new log-lambda grid
@@ -83,14 +89,14 @@ def process_one_file(
     mask = (lam_new >= lam_min) & (lam_new <= lam_max)
     lam_new_masked = lam_new[mask]
 
-    # use spectres to resample
     flux_rebinned = spectres(lam_new_masked, lam, flux_smooth, fill=0.0)
 
     header = (
         "wavelength (nm)\tflux (erg/cm^2/s/nm)\n"
         f"Degraded from R_native={R_native:.0f} to R_target={R_target:.0f}, "
         f"Gaussian sigma_pix≈{sigma_pix:.3f}, "
-        f"log-lambda step increased by factor {factor} (flux-conserving resampling)"
+        f"target oversampling={oversamp:.1f} px/FWHM "
+        f"(flux-conserving resampling onto log-lambda grid)"
     )
     np.savetxt(
         outfile,
@@ -106,8 +112,8 @@ def main():
     ap = argparse.ArgumentParser(
         description=(
             "Degrade true spectral resolution (Gaussian in ln lambda) and "
-            "then flux-conservingly resample to a new log-lambda grid "
-            "(downsampling keeping constant R)."
+            "then flux-conservingly resample to a new log-lambda grid with "
+            "a specified oversampling (pixels per FWHM)."
         )
     )
     ap.add_argument(
@@ -116,7 +122,7 @@ def main():
     )
     ap.add_argument(
         "--outdir", default=None,
-        help="Output directory (default: out_R<Rtarget>_fac<factor>/)",
+        help="Output directory (default: out_R<Rtarget>_os<oversamp>/)",
     )
     ap.add_argument(
         "--Rnative", type=float, default=10000.0,
@@ -127,9 +133,9 @@ def main():
         help="Target intrinsic resolving power (must be < Rnative)",
     )
     ap.add_argument(
-        "--factor", type=float, default=2.0,
-        help="Factor by which to increase Δln lambda (sampling step); "
-             "factor=2 ≈ downsample by 2 (default: 2).",
+        "--oversamp", type=float, default=3.0,
+        help="Desired oversampling in pixels per FWHM at R_target "
+             "(default: 3.0).",
     )
     ap.add_argument(
         "--overwrite", action="store_true",
@@ -147,23 +153,23 @@ def main():
         return
 
     if args.outdir is None:
-        args.outdir = f"out_R{int(args.Rtarget):05d}"
+        args.outdir = f"out_R{int(args.Rtarget):05d}_os{int(args.oversamp)}"
     os.makedirs(args.outdir, exist_ok=True)
 
     # Compute sigma_pix and the new wavelength grid once, from the first spectrum
-    sigma_pix, dln_old, lam_new = compute_sigma_and_new_grid(
+    sigma_pix, dln_old, dln_new, lam_new = compute_sigma_and_new_grid(
         files[0],
         R_native=args.Rnative,
         R_target=args.Rtarget,
-        factor=args.factor,
+        oversamp=args.oversamp,
     )
     print(
         f"Example file: {os.path.basename(files[0])}\n"
-        f"  original dln ~ {dln_old:.3e}, "
-        f"new dln ~ {np.median(np.diff(np.log(lam_new))):.3e}\n"
+        f"  original dln ~ {dln_old:.3e} (R_samp,old ~ {1.0/dln_old:.1f})\n"
+        f"  new dln      ~ {dln_new:.3e} (R_samp,new ~ {1.0/dln_new:.1f})\n"
         f"  Gaussian sigma_pix ~ {sigma_pix:.3f} "
         f"(R_native={args.Rnative:.0f} -> R_target={args.Rtarget:.0f}), "
-        f"sampling step x {args.factor}"
+        f"oversampling target = {args.oversamp:.1f} px/FWHM"
     )
 
     worker = partial(
@@ -173,7 +179,7 @@ def main():
         lam_new=lam_new,
         R_native=args.Rnative,
         R_target=args.Rtarget,
-        factor=args.factor,
+        oversamp=args.oversamp,
         overwrite=args.overwrite,
     )
 
