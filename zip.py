@@ -6,9 +6,9 @@ import re
 import zipfile
 
 # Match filenames like:
-# LTE_T12000_logg6.00_FeH+1.0_alpha+0.0_phoenixMidRes_compressed.txt
+# LTE_T12000_logg6.00_FeH+1.0_alpha+0.0_phoenixMidRes_R05000.txt
 PAT_META_ALPHA = re.compile(
-    r"^LTE_T\d{5}_logg[0-9.]+_FeH([+-]\d+\.\d)_alpha([+-]\d+\.\d)_phoenixMidRes_compressed\.txt$"
+    r"^LTE_T\d{5}_logg[0-9.]+_FeH([+-]\d+\.\d)_alpha([+-]\d+\.\d)_phoenixMidRes_R05000\.txt$"
 )
 
 
@@ -35,7 +35,7 @@ def zip_groups(groups, outdir, overwrite=False):
 
     for (feh, alpha), paths in groups.items():
         # Build a readable zip name, e.g. FeH+1.0_alpha+0.0_phoenixMidRes_compressed.zip
-        zip_name = f"FeH{feh}_alpha{alpha}_phoenixMidRes_compressed.zip"
+        zip_name = f"FeH{feh}_alpha{alpha}_phoenixMidRes_R05000.zip"
         zip_path = os.path.join(outdir, zip_name)
 
         if os.path.exists(zip_path) and not overwrite:
